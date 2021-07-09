@@ -13,10 +13,6 @@ namespace WindowsFormsApp
 {
     public partial class Form1 : Form
     {
-        SqlConnection CONNECTION;
-        string CONNECTION_STRING = @"Data Source=(LocalDB)\MSSQLLocalDB;AttachDbFilename=C:\Users\Admin\Documents\TEAM_12_ULTRON_3_FORAGE_DATABASE.mdf;Integrated Security=True;Connect Timeout=30";
-
-
         public Form1()
         {
             InitializeComponent();
@@ -25,6 +21,22 @@ namespace WindowsFormsApp
         private void Form1_Load(object sender, EventArgs e)
         {
             populateComboBox();
+        }
+
+        private bool isEmptyEntry(String value)
+        {
+            if (String.IsNullOrWhiteSpace(value))
+                return true;
+            return false;
+        }
+
+        private bool isCompletedForm()
+        {
+            if (isEmptyEntry(textBoxUsername.Text) || isEmptyEntry(textBoxPassword.Text) || 
+                isEmptyEntry(textBoxConfirmPassword.Text) || isEmptyEntry(textBoxFirstName.Text) || 
+                isEmptyEntry(textBoxLastName.Text) || isEmptyEntry(comboBoxAccessLevel.Text))
+                return false;
+            else return true;
         }
 
         private void populateComboBox()
@@ -40,22 +52,25 @@ namespace WindowsFormsApp
             row[0] = 0;
             dt.Rows.InsertAt(row, 0);
 
-            comboBoxAccessLevel.DataSource = dt;
-            comboBoxAccessLevel.DisplayMember = "Name";
             comboBoxAccessLevel.ValueMember = "Id";
-
+            comboBoxAccessLevel.DisplayMember = "Name";
+            comboBoxAccessLevel.DataSource = dt;
         }
 
-        private bool isMatching(string a, string b)
+        private bool isConfirmedPassword()
         {
-            if (a.Equals(b))
-                return true;
-            else return false;
+            if (!textBoxPassword.Text.Equals(textBoxConfirmPassword.Text))
+            {
+                MessageBox.Show("Passwords do not match", "", MessageBoxButtons.RetryCancel, MessageBoxIcon.Warning);
+                textBoxConfirmPassword.Clear();
+                return false;
+            }
+            return true;
         }
 
-        private bool isExisting(string str1, SqlConnection connection)
+        private bool isExistingUser(string str, SqlConnection connection)
         {
-            string SQL_SELECT_STMNT = "SELECT * FROM Student WHERE studentUsername = '" + str1 + "'";
+            string SQL_SELECT_STMNT = "SELECT * FROM dbo.[User] WHERE Username = '" + str +"'";
 
             SqlDataAdapter DATA_ADAPTER = new SqlDataAdapter(SQL_SELECT_STMNT, connection);
             DataTable DATA_TABLE = new DataTable();
@@ -66,32 +81,39 @@ namespace WindowsFormsApp
             else return false;
         }
 
-
         private void buttonAddUser_Click(object sender, EventArgs e)
         {
-            if (!isMatching(textBoxPassword.Text, textBoxConfirmPassword.Text))
-            {
-                MessageBox.Show("Passwords do not match", "", MessageBoxButtons.RetryCancel, MessageBoxIcon.Warning);
-                textBoxConfirmPassword.Clear();
+            if (!isConfirmedPassword())
                 return;
-            }
-            if (!isExisting(textBoxUsername.Text, CONNECTION))
+
+            SqlConnection connection = new SqlConnection(@"Data Source=(localdb)\MSSQLLocalDB;Initial Catalog=AutoEDITest;Integrated Security=True;Connect Timeout=30;Encrypt=False;TrustServerCertificate=False;ApplicationIntent=ReadWrite;MultiSubnetFailover=False");
+
+            if (isCompletedForm())
             {
-                SqlCommand command = new SqlCommand(@"INSERT INTO User (Username, Password, AccessLevelId, FirstName, LastName) 
-                  VALUES ('" + textBoxUsername.Text + "', " +
-                         "'" + textBoxPassword.Text + "', " +
-                         "'" + comboBoxAccessLevel.Text + "', " +
-                         "'" + textBoxFirstName.Text + "', " +
-                         "'" + textBoxLastName.Text + 
-                         "')", CONNECTION);
-                command.ExecuteNonQuery();
-                CONNECTION.Close();
-                MessageBox.Show("Successfully registered " + textBoxFirstName.Text + "!", "Complete", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                Close();
+                if (!isExistingUser(textBoxUsername.Text, connection))
+                {
+                    connection.Open();
+                    String query = "INSERT INTO dbo.[User] (Username, Password, AccessLevelId, FirstName, LastName) VALUES (@Username, @Password, @AccessLevelId, @FirstName, @LastName)";
+                    SqlCommand command = new SqlCommand(query, connection);
+                    command.Parameters.AddWithValue("@Username", textBoxUsername.Text);
+                    command.Parameters.AddWithValue("@Password", textBoxPassword.Text);
+                    command.Parameters.Add("@AccessLevelId", SqlDbType.Int);
+                    command.Parameters["@AccessLevelId"].Value = comboBoxAccessLevel.SelectedIndex;
+                    command.Parameters.AddWithValue("@FirstName", textBoxFirstName.Text);
+                    command.Parameters.AddWithValue("@LastName", textBoxLastName.Text);
+                    command.ExecuteNonQuery();
+                    MessageBox.Show("Successfully registered " + textBoxFirstName.Text + "!", "Complete", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    Close();
+                }
+                else
+                {
+                    MessageBox.Show("We already know you here " + textBoxFirstName.Text + "! Rather log in.", "Account already exists", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+                connection.Close();
             }
             else
             {
-                MessageBox.Show("We already know you here " + textBoxFirstName.Text + "! Rather log in.", "Account already exists", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                MessageBox.Show("Please fill in all blanks", "", MessageBoxButtons.RetryCancel, MessageBoxIcon.Warning);
             }
         }
     }
