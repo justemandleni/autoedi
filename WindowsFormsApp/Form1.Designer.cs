@@ -149,7 +149,7 @@
             this.buttonAddUser.Location = new System.Drawing.Point(86, 391);
             this.buttonAddUser.Name = "buttonAddUser";
             this.buttonAddUser.Size = new System.Drawing.Size(99, 23);
-            this.buttonAddUser.TabIndex = 11;
+            this.buttonAddUser.TabIndex = 7;
             this.buttonAddUser.Text = "Create User";
             this.buttonAddUser.UseVisualStyleBackColor = true;
             this.buttonAddUser.Click += new System.EventHandler(this.buttonAddUser_Click);
@@ -161,7 +161,7 @@
             this.comboBoxAccessLevel.Location = new System.Drawing.Point(37, 228);
             this.comboBoxAccessLevel.Name = "comboBoxAccessLevel";
             this.comboBoxAccessLevel.Size = new System.Drawing.Size(201, 21);
-            this.comboBoxAccessLevel.TabIndex = 12;
+            this.comboBoxAccessLevel.TabIndex = 4;
             // 
             // Form1
             // 
