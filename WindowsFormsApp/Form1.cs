@@ -23,6 +23,16 @@ namespace WindowsFormsApp
             populateComboBox();
         }
 
+        private void clearAll()
+        {
+            textBoxUsername.Clear();
+            textBoxPassword.Clear();
+            textBoxConfirmPassword.Clear();
+            textBoxFirstName.Clear();
+            textBoxLastName.Clear();
+            comboBoxAccessLevel.SelectedIndex = 0;
+        }
+
         private bool isEmptyEntry(String value)
         {
             if (String.IsNullOrWhiteSpace(value))
@@ -108,6 +118,7 @@ namespace WindowsFormsApp
                 else
                 {
                     MessageBox.Show("We already know you here " + textBoxFirstName.Text + "! Rather log in.", "Account already exists", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    clearAll();
                 }
                 connection.Close();
             }
