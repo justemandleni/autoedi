@@ -9,17 +9,38 @@ namespace WindowsFormsApp
 {
     public partial class Form1 : Form
     {
+        private SqlConnection SQL_CONNECTION; 
+        private string USER_USERNAME, USER_PASSWORD, USER_ACCESSLEVELID, USER_FIRSTNAME, USER_LASTNAME;
+
         public Form1()
         {
             InitializeComponent();
+            SQL_CONNECTION = new SqlConnection(@"Data Source=(localdb)\MSSQLLocalDB;Initial Catalog=AutoEDITest;Integrated Security=True;Connect Timeout=30;Encrypt=False;TrustServerCertificate=False;ApplicationIntent=ReadWrite;MultiSubnetFailover=False");
+            USER_USERNAME = textBoxUsername.Text;
+            USER_PASSWORD = textBoxPassword.Text;
+            USER_ACCESSLEVELID = comboBoxAccessLevel.SelectedIndex.ToString();
+            USER_FIRSTNAME = textBoxFirstName.Text;
+            USER_LASTNAME = textBoxLastName.Text;
         }
-
         private void Form1_Load(object sender, EventArgs e)
         {
-            populateComboBox();
+            AccessLeveltbl_Load();
         }
-
-        private void clearAll()
+        private void AccessLeveltbl_Load()
+        {
+            string QUERY = "SELECT Id, Name FROM AccessLevel;";
+            SqlDataAdapter DATA_ADAPTER = new SqlDataAdapter(QUERY, SQL_CONNECTION);
+            SQL_CONNECTION.Open();
+            DataTable DATA_TABLE = new DataTable();
+            DATA_ADAPTER.Fill(DATA_TABLE);
+            DataRow ROW = DATA_TABLE.NewRow();
+            ROW[0] = 0;
+            DATA_TABLE.Rows.InsertAt(ROW, 0);
+            comboBoxAccessLevel.ValueMember = "Id";
+            comboBoxAccessLevel.DisplayMember = "Name";
+            comboBoxAccessLevel.DataSource = DATA_TABLE;
+        }
+        private void Clear_All_Fields()
         {
             textBoxUsername.Clear();
             textBoxPassword.Clear();
@@ -28,118 +49,94 @@ namespace WindowsFormsApp
             textBoxLastName.Clear();
             comboBoxAccessLevel.SelectedIndex = 0;
         }
-        private bool isEmptyEntry(String value)
+        private bool Is_Entry_Empty(string strValue)
         {
-            if (String.IsNullOrWhiteSpace(value))
+            if (String.IsNullOrWhiteSpace(strValue))
                 return true;
             return false;
         }
-        private bool isCompletedForm()
+        private bool Is_Form_Complete()
         {
-            if (isEmptyEntry(textBoxUsername.Text) || isEmptyEntry(textBoxPassword.Text) ||
-                isEmptyEntry(textBoxConfirmPassword.Text) || isEmptyEntry(textBoxFirstName.Text) ||
-                isEmptyEntry(textBoxLastName.Text) || isEmptyEntry(comboBoxAccessLevel.Text))
+            if (Is_Entry_Empty(textBoxUsername.Text) || Is_Entry_Empty(textBoxPassword.Text) ||
+                Is_Entry_Empty(textBoxConfirmPassword.Text) || Is_Entry_Empty(textBoxFirstName.Text) ||
+                Is_Entry_Empty(textBoxLastName.Text) || Is_Entry_Empty(comboBoxAccessLevel.Text))
                 return false;
-            else return true;
-        }
-        private void populateComboBox()
-        {
-            SqlConnection conn = new SqlConnection(@"Data Source=(localdb)\MSSQLLocalDB;Initial Catalog=AutoEDITest;Integrated Security=True;Connect Timeout=30;Encrypt=False;TrustServerCertificate=False;ApplicationIntent=ReadWrite;MultiSubnetFailover=False");
-
-            string query = "SELECT Id, Name FROM AccessLevel;";
-            SqlDataAdapter da = new SqlDataAdapter(query, conn);
-            conn.Open();
-            DataTable dt = new DataTable();
-            da.Fill(dt);
-            DataRow row = dt.NewRow();
-            row[0] = 0;
-            dt.Rows.InsertAt(row, 0);
-
-            comboBoxAccessLevel.ValueMember = "Id";
-            comboBoxAccessLevel.DisplayMember = "Name";
-            comboBoxAccessLevel.DataSource = dt;
-        }
-        private bool isConfirmedPassword()
-        {
-            if (!textBoxPassword.Text.Equals(textBoxConfirmPassword.Text))
-            {
-                MessageBox.Show("Passwords do not match", "", MessageBoxButtons.RetryCancel, MessageBoxIcon.Warning);
-                textBoxConfirmPassword.Clear();
-                return false;
-            }
             return true;
         }
-        private bool isExistingUser(string str, SqlConnection connection)
+        private bool Is_Password_Confirmed()
         {
-            string SQL_SELECT_STMNT = "SELECT * FROM dbo.[User] WHERE Username = '" + str + "'";
+            if (textBoxPassword.Text.Equals(textBoxConfirmPassword.Text))
+                return true;
 
-            SqlDataAdapter DATA_ADAPTER = new SqlDataAdapter(SQL_SELECT_STMNT, connection);
+            MessageBox.Show("Passwords do not match", "", MessageBoxButtons.RetryCancel, MessageBoxIcon.Warning);
+            textBoxConfirmPassword.Clear();
+            return false;
+        }
+        private bool Is_User_Existing(string strUsername)
+        {
+            string SQL_SELECT_STMNT = "SELECT * FROM dbo.[User] WHERE Username = '" + strUsername + "'";
+            SqlDataAdapter DATA_ADAPTER = new SqlDataAdapter(SQL_SELECT_STMNT, SQL_CONNECTION);
             DataTable DATA_TABLE = new DataTable();
             DATA_ADAPTER.Fill(DATA_TABLE);
-
             if (DATA_TABLE.Rows.Count > 0)
                 return true;
-            else return false;
+            return false;
         }
         private void buttonAddUser_Click(object sender, EventArgs e)
         {
-            if (!isConfirmedPassword())
+            if (!Is_Password_Confirmed())
                 return;
 
-            SqlConnection connection = new SqlConnection(@"Data Source=(localdb)\MSSQLLocalDB;Initial Catalog=AutoEDITest;Integrated Security=True;Connect Timeout=30;Encrypt=False;TrustServerCertificate=False;ApplicationIntent=ReadWrite;MultiSubnetFailover=False");
-
-            if (isCompletedForm())
+            if (!Is_Form_Complete())
+                MessageBox.Show("Please fill in all entries", "", MessageBoxButtons.RetryCancel, MessageBoxIcon.Warning);
+            else
             {
-                if (!isExistingUser(textBoxUsername.Text, connection))
+                if (Is_User_Existing(USER_USERNAME))
                 {
-                    connection.Open();
-                    String query = "INSERT INTO dbo.[User] (Username, Password, AccessLevelId, FirstName, LastName) OUTPUT INSERTED.Id VALUES (@Username, @Password, @AccessLevelId, @FirstName, @LastName)";
-                    SqlCommand command = new SqlCommand(query, connection);
-                    command.Parameters.AddWithValue("@Username", textBoxUsername.Text);
-                    command.Parameters.AddWithValue("@Password", textBoxPassword.Text);
-                    command.Parameters.Add("@AccessLevelId", SqlDbType.Int);
-                    command.Parameters["@AccessLevelId"].Value = comboBoxAccessLevel.SelectedIndex;
-                    command.Parameters.AddWithValue("@FirstName", textBoxFirstName.Text);
-                    command.Parameters.AddWithValue("@LastName", textBoxLastName.Text);
-                    int userId = (int)command.ExecuteScalar();
+                    MessageBox.Show("We already know you here " + USER_FIRSTNAME, "Account already exists", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    Clear_All_Fields();
+                }
+                else
+                {
+                    int userId = Usertbl_Insert(); //create user in Db
 
-                    IRestResponse restResponse = getApiCalloutResponse();
+                    IRestResponse guidResponseObject = Get_Guid_Response_Object();
+                    JsonDeserializer jsonDeserializer = new JsonDeserializer();
+
                     IRestResponse restResponse2;
-                    if (restResponse.IsSuccessful)
+
+                    if (guidResponseObject.IsSuccessful) //200 OK
                     {
-                        JsonDeserializer jsonDeserializer = new JsonDeserializer();
-                        string currentUserGuid = jsonDeserializer.Deserialize<Root>(restResponse).guid;
+                        string responseMessage = jsonDeserializer.Deserialize<Root>(guidResponseObject).message;
+                        string userGuid = jsonDeserializer.Deserialize<Root>(guidResponseObject).guid; //get user Guid
 
-                        restResponse2 = apiCalloutRegisterUser(currentUserGuid, userId.ToString() ,textBoxUsername.Text,textBoxPassword.Text,comboBoxAccessLevel.SelectedIndex.ToString(),textBoxFirstName.Text,textBoxLastName.Text);
+                        if (responseMessage.Equals("success")) {
+                            restResponse2 = apiCalloutRegisterUser(userGuid, userId.ToString()); // call test register
 
-                        if (restResponse2.IsSuccessful)
-                            MessageBox.Show("Successfully registered " + textBoxFirstName.Text + "!", "Complete", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                        else
-                        {
-                            MessageBox.Show("" + restResponse2.ErrorMessage, "", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                            if (restResponse2.IsSuccessful)
+                                MessageBox.Show("Successfully registered " + textBoxFirstName.Text + "!", "Complete", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                            else
+                            {
+                                string message = jsonDeserializer.Deserialize<Root>(guidResponseObject).message;
+                                MessageBox.Show("" + message, "", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                            }
                         }
                     }
-                    else
+                    else //ENCOUNTERED 404 OR SOME WIERD SERVER RESPONSE RESULT
                     {
-                        MessageBox.Show("" + restResponse.ErrorMessage, "", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        MessageBox.Show("Failed to register due to error code: " + guidResponseObject.StatusCode, "", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        //update User db as not registered
+                        Usertbl_Update(userId);
                     }
 
                     Close();
                 }
-                else
-                {
-                    MessageBox.Show("We already know you here " + textBoxFirstName.Text + "! Rather log in.", "Account already exists", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                    clearAll();
-                }
-                connection.Close();
-            }
-            else
-            {
-                MessageBox.Show("Please fill in all blanks", "", MessageBoxButtons.RetryCancel, MessageBoxIcon.Warning);
+
+                SQL_CONNECTION.Close();
             }
         }
 
-        private IRestResponse getApiCalloutResponse()
+        private IRestResponse Get_Guid_Response_Object()
         {
             var client = new RestClient("http://www.autoediportal.com/AutoEDI/Api/v1/TestLogin.php");
             client.Timeout = -1;
@@ -157,27 +154,47 @@ namespace WindowsFormsApp
             IRestResponse response = client.Execute(request);
             return response;
         }
-
-        private IRestResponse apiCalloutRegisterUser(string guid, string userId, string userName, string passWord, string accessLevelId, string firstName, string lastName)
+        private IRestResponse apiCalloutRegisterUser(string guid, string userId)
         {
             var client = new RestClient("http://www.autoediportal.com/AutoEDI/api/v1/TestRegister.php");
             client.Timeout = -1;
             var request = new RestRequest(Method.POST);
-            request.AddHeader("Authorization", "Basic VGVzdFJlZ2lzdGVyOlRlc3RQYXNzd29yZA==");
+            //request.AddHeader("Authorization", "Basic VGVzdFJlZ2lzdGVyOlRlc3RQYXNzd29yZA==");
             request.AddHeader("Content-Type", "application/json");
             var body =
                 @"{
                     ""guid"": """+guid+@""",
                     ""userId"": """+userId+@""",
-                    ""username"":"""+userName+@""",
-                    ""password"": """+passWord+@""",
-                    ""accessLevelId"": """+accessLevelId+@""", 
-                    ""firstName"": """+firstName+@""",
-                    ""lastName"": """+lastName+@"""
+                    ""username"":"""+USER_USERNAME+@""",
+                    ""password"": """+USER_PASSWORD+@""",
+                    ""accessLevelId"": """+USER_ACCESSLEVELID+@""", 
+                    ""firstName"": """+USER_FIRSTNAME+@""",
+                    ""lastName"": """+USER_LASTNAME+@"""
                   }";
             request.AddParameter("application/json", body, ParameterType.RequestBody);
             IRestResponse response = client.Execute(request);
             return response;
+        }
+
+        private int Usertbl_Insert()
+        {
+            String INSERT_QUERY =
+                "INSERT INTO dbo.[User] (Username, Password, AccessLevelId, FirstName, LastName) " +
+                "OUTPUT INSERTED.Id " +
+                "VALUES (@Username, @Password, @AccessLevelId, @FirstName, @LastName)";
+            SqlCommand SQL_COMMAND = new SqlCommand(INSERT_QUERY, SQL_CONNECTION);
+            SQL_COMMAND.Parameters.AddWithValue("@Username", textBoxUsername.Text);
+            SQL_COMMAND.Parameters.AddWithValue("@Password", textBoxPassword.Text);
+            SQL_COMMAND.Parameters.Add("@AccessLevelId", SqlDbType.Int);
+            SQL_COMMAND.Parameters["@AccessLevelId"].Value = comboBoxAccessLevel.SelectedIndex;
+            SQL_COMMAND.Parameters.AddWithValue("@FirstName", textBoxFirstName.Text);
+            SQL_COMMAND.Parameters.AddWithValue("@LastName", textBoxLastName.Text);
+            return (int)SQL_COMMAND.ExecuteScalar();
+        }
+
+        private void Usertbl_Update(int strUserId)
+        {
+
         }
     }
 }
