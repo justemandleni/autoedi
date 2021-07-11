@@ -9,8 +9,8 @@ namespace WindowsFormsApp
 {
     public partial class Form1 : Form
     {
-        private SqlConnection SQL_CONNECTION; 
-        private string USER_USERNAME, USER_PASSWORD, USER_ACCESSLEVELID, USER_FIRSTNAME, USER_LASTNAME;
+        private SqlConnection SQL_CONNECTION;
+        private string USER_ID, USER_USERNAME, USER_PASSWORD, USER_ACCESSLEVELID, USER_FIRSTNAME, USER_LASTNAME;
 
         public Form1()
         {
@@ -60,7 +60,10 @@ namespace WindowsFormsApp
             if (Is_Entry_Empty(textBoxUsername.Text) || Is_Entry_Empty(textBoxPassword.Text) ||
                 Is_Entry_Empty(textBoxConfirmPassword.Text) || Is_Entry_Empty(textBoxFirstName.Text) ||
                 Is_Entry_Empty(textBoxLastName.Text) || Is_Entry_Empty(comboBoxAccessLevel.Text))
+            {
+                MessageBox.Show("Please fill in all entries", "", MessageBoxButtons.RetryCancel, MessageBoxIcon.Warning);
                 return false;
+            }
             return true;
         }
         private bool Is_Password_Confirmed()
@@ -70,6 +73,7 @@ namespace WindowsFormsApp
 
             MessageBox.Show("Passwords do not match", "", MessageBoxButtons.RetryCancel, MessageBoxIcon.Warning);
             textBoxConfirmPassword.Clear();
+            textBoxPassword.Clear();
             return false;
         }
         private bool Is_User_Existing(string strUsername)
@@ -84,12 +88,7 @@ namespace WindowsFormsApp
         }
         private void buttonAddUser_Click(object sender, EventArgs e)
         {
-            if (!Is_Password_Confirmed())
-                return;
-
-            if (!Is_Form_Complete())
-                MessageBox.Show("Please fill in all entries", "", MessageBoxButtons.RetryCancel, MessageBoxIcon.Warning);
-            else
+            if (isValidated())
             {
                 if (Is_User_Existing(USER_USERNAME))
                 {
@@ -98,9 +97,9 @@ namespace WindowsFormsApp
                 }
                 else
                 {
-                    int userId = Usertbl_Insert(); //create user in Db
-
-                    IRestResponse guidResponseObject = Get_Guid_Response_Object();
+                    Insert_User_tbl();
+                    
+                    IRestResponse guidResponseObject = Get_Guid_();
                     JsonDeserializer jsonDeserializer = new JsonDeserializer();
 
                     IRestResponse restResponse2;
@@ -110,8 +109,9 @@ namespace WindowsFormsApp
                         string responseMessage = jsonDeserializer.Deserialize<Root>(guidResponseObject).message;
                         string userGuid = jsonDeserializer.Deserialize<Root>(guidResponseObject).guid; //get user Guid
 
-                        if (responseMessage.Equals("success")) {
-                            restResponse2 = apiCalloutRegisterUser(userGuid, userId.ToString()); // call test register
+                        if (responseMessage.Equals("success"))
+                        {
+                            restResponse2 = apiCalloutRegisterUser(userGuid, USER_ID); // call test register
 
                             if (restResponse2.IsSuccessful)
                                 MessageBox.Show("Successfully registered " + textBoxFirstName.Text + "!", "Complete", MessageBoxButtons.OK, MessageBoxIcon.Information);
@@ -126,7 +126,7 @@ namespace WindowsFormsApp
                     {
                         MessageBox.Show("Failed to register due to error code: " + guidResponseObject.StatusCode, "", MessageBoxButtons.OK, MessageBoxIcon.Error);
                         //update User db as not registered
-                        Usertbl_Update(userId);
+                        Usertbl_Update(int.Parse(USER_ID));
                     }
 
                     Close();
@@ -136,7 +136,17 @@ namespace WindowsFormsApp
             }
         }
 
-        private IRestResponse Get_Guid_Response_Object()
+        private bool isValidated()
+        {
+            if (Is_Password_Confirmed())
+            {
+                if (Is_Form_Complete())
+                    return true;
+            }
+            return false;
+        }
+
+        private string Get_Guid_()
         {
             var client = new RestClient("http://www.autoediportal.com/AutoEDI/Api/v1/TestLogin.php");
             client.Timeout = -1;
@@ -152,7 +162,21 @@ namespace WindowsFormsApp
                        @"}";
             request.AddParameter("application/json", body, ParameterType.RequestBody);
             IRestResponse response = client.Execute(request);
-            return response;
+            if (response.IsSuccessful)
+            {
+                JsonDeserializer jsonDeserializer = new JsonDeserializer();
+                string responseMessage = jsonDeserializer.Deserialize<Root>(response).message;
+                string userGuid = jsonDeserializer.Deserialize<Root>(response).guid;
+
+                return null;
+            }
+            else //ENCOUNTERED 404 OR SOME WIERD RESPONSE CODE
+            {
+                MessageBox.Show("Failed to register due to error code: " + response.StatusCode, "", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                //update User db as not registered
+                Usertbl_Update(int.Parse(USER_ID));
+                return null;
+            }
         }
         private IRestResponse apiCalloutRegisterUser(string guid, string userId)
         {
@@ -176,7 +200,7 @@ namespace WindowsFormsApp
             return response;
         }
 
-        private int Usertbl_Insert()
+        private void Insert_User_tbl()
         {
             String INSERT_QUERY =
                 "INSERT INTO dbo.[User] (Username, Password, AccessLevelId, FirstName, LastName) " +
@@ -189,7 +213,7 @@ namespace WindowsFormsApp
             SQL_COMMAND.Parameters["@AccessLevelId"].Value = comboBoxAccessLevel.SelectedIndex;
             SQL_COMMAND.Parameters.AddWithValue("@FirstName", textBoxFirstName.Text);
             SQL_COMMAND.Parameters.AddWithValue("@LastName", textBoxLastName.Text);
-            return (int)SQL_COMMAND.ExecuteScalar();
+            USER_ID = (string)SQL_COMMAND.ExecuteScalar();
         }
 
         private void Usertbl_Update(int strUserId)
