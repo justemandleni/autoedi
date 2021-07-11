@@ -78,26 +78,34 @@ namespace WindowsFormsApp
             textBoxPassword.Clear();
             return false;
         }
-        private bool Is_Existing_User()
+        private bool Is_Existing_User(string str, SqlConnection connection)
         {
-            string SQL_SELECT_STMNT = "SELECT COUNT(*) FROM dbo.[User] WHERE Username = @Username";
-            SqlCommand COMMAND = new SqlCommand(SQL_SELECT_STMNT, SQL_CONNECTION);
-            COMMAND.Parameters.AddWithValue("@Username", textBoxUsername.Text);
-            if (SQL_CONNECTION.State == ConnectionState.Closed)
-                SQL_CONNECTION.Open();
-            var result = COMMAND.ExecuteScalar();
-            if (result != null)
-            {
+            //string SQL_SELECT_STMNT = "SELECT COUNT(*) FROM dbo.[User] WHERE Username = @Username";
+            //SqlCommand COMMAND = new SqlCommand(SQL_SELECT_STMNT, SQL_CONNECTION);
+            //COMMAND.Parameters.AddWithValue("@Username", textBoxUsername.Text);
+            //if (SQL_CONNECTION.State == ConnectionState.Closed)
+            //    SQL_CONNECTION.Open();
+            //var result = COMMAND.ExecuteScalar();
+            //if (result == null)
+            //    return false;
+            //return true;
+
+            string SQL_SELECT_STMNT = "SELECT * FROM dbo.[User] WHERE Username = '" + str + "'";
+
+            SqlDataAdapter DATA_ADAPTER = new SqlDataAdapter(SQL_SELECT_STMNT, connection);
+            DataTable DATA_TABLE = new DataTable();
+            DATA_ADAPTER.Fill(DATA_TABLE);
+
+            if (DATA_TABLE.Rows.Count > 0)
                 return true;
-            }
             else return false;
         }
         private void buttonAddUser_Click(object sender, EventArgs e)
         {
             if (isValidated())
             {
-                bool inserted = Insert_User_tbl();
-                if (inserted)
+                bool insertedDb = Insert_User_tbl();
+                if (insertedDb)
                 {
                     string userGuid = TestLogin("TestRegister", "TestPassword");
                     if (userGuid.Equals(""))
@@ -106,6 +114,7 @@ namespace WindowsFormsApp
                 }
             
                 populateDataGridView();
+                Clear_All_Fields();
             }
         }
 
@@ -226,7 +235,7 @@ namespace WindowsFormsApp
 
         private bool Insert_User_tbl()
         {
-            if (Is_Existing_User())
+            if (Is_Existing_User(textBoxUsername.Text, SQL_CONNECTION))
             {
                 MessageBox.Show("User already exists", "", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 Clear_All_Fields();
