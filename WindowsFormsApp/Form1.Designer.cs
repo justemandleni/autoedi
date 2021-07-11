@@ -41,12 +41,14 @@
             this.labelConfirmPassword = new System.Windows.Forms.Label();
             this.buttonAddUser = new System.Windows.Forms.Button();
             this.comboBoxAccessLevel = new System.Windows.Forms.ComboBox();
+            this.dataGridView1 = new System.Windows.Forms.DataGridView();
+            ((System.ComponentModel.ISupportInitialize)(this.dataGridView1)).BeginInit();
             this.SuspendLayout();
             // 
             // labelUsername
             // 
             this.labelUsername.AutoSize = true;
-            this.labelUsername.Location = new System.Drawing.Point(34, 45);
+            this.labelUsername.Location = new System.Drawing.Point(122, 45);
             this.labelUsername.Name = "labelUsername";
             this.labelUsername.Size = new System.Drawing.Size(65, 15);
             this.labelUsername.TabIndex = 0;
@@ -54,7 +56,7 @@
             // 
             // textBoxUsername
             // 
-            this.textBoxUsername.Location = new System.Drawing.Point(37, 63);
+            this.textBoxUsername.Location = new System.Drawing.Point(125, 63);
             this.textBoxUsername.MaxLength = 50;
             this.textBoxUsername.Name = "textBoxUsername";
             this.textBoxUsername.Size = new System.Drawing.Size(201, 20);
@@ -63,7 +65,7 @@
             // 
             // textBoxPassword
             // 
-            this.textBoxPassword.Location = new System.Drawing.Point(37, 120);
+            this.textBoxPassword.Location = new System.Drawing.Point(125, 120);
             this.textBoxPassword.MaxLength = 50;
             this.textBoxPassword.Name = "textBoxPassword";
             this.textBoxPassword.PasswordChar = '*';
@@ -74,7 +76,7 @@
             // labelPassword
             // 
             this.labelPassword.AutoSize = true;
-            this.labelPassword.Location = new System.Drawing.Point(34, 102);
+            this.labelPassword.Location = new System.Drawing.Point(122, 102);
             this.labelPassword.Name = "labelPassword";
             this.labelPassword.Size = new System.Drawing.Size(61, 15);
             this.labelPassword.TabIndex = 2;
@@ -83,7 +85,7 @@
             // labelAccessLevel
             // 
             this.labelAccessLevel.AutoSize = true;
-            this.labelAccessLevel.Location = new System.Drawing.Point(34, 205);
+            this.labelAccessLevel.Location = new System.Drawing.Point(122, 205);
             this.labelAccessLevel.Name = "labelAccessLevel";
             this.labelAccessLevel.Size = new System.Drawing.Size(77, 15);
             this.labelAccessLevel.TabIndex = 4;
@@ -91,7 +93,7 @@
             // 
             // textBoxFirstName
             // 
-            this.textBoxFirstName.Location = new System.Drawing.Point(37, 280);
+            this.textBoxFirstName.Location = new System.Drawing.Point(125, 280);
             this.textBoxFirstName.MaxLength = 50;
             this.textBoxFirstName.Name = "textBoxFirstName";
             this.textBoxFirstName.Size = new System.Drawing.Size(201, 20);
@@ -101,7 +103,7 @@
             // labelFirstName
             // 
             this.labelFirstName.AutoSize = true;
-            this.labelFirstName.Location = new System.Drawing.Point(34, 262);
+            this.labelFirstName.Location = new System.Drawing.Point(122, 262);
             this.labelFirstName.Name = "labelFirstName";
             this.labelFirstName.Size = new System.Drawing.Size(67, 15);
             this.labelFirstName.TabIndex = 6;
@@ -109,7 +111,7 @@
             // 
             // textBoxLastName
             // 
-            this.textBoxLastName.Location = new System.Drawing.Point(37, 336);
+            this.textBoxLastName.Location = new System.Drawing.Point(125, 336);
             this.textBoxLastName.MaxLength = 50;
             this.textBoxLastName.Name = "textBoxLastName";
             this.textBoxLastName.Size = new System.Drawing.Size(201, 20);
@@ -119,7 +121,7 @@
             // labelLastName
             // 
             this.labelLastName.AutoSize = true;
-            this.labelLastName.Location = new System.Drawing.Point(34, 318);
+            this.labelLastName.Location = new System.Drawing.Point(122, 318);
             this.labelLastName.Name = "labelLastName";
             this.labelLastName.Size = new System.Drawing.Size(67, 15);
             this.labelLastName.TabIndex = 8;
@@ -127,7 +129,7 @@
             // 
             // textBoxConfirmPassword
             // 
-            this.textBoxConfirmPassword.Location = new System.Drawing.Point(37, 172);
+            this.textBoxConfirmPassword.Location = new System.Drawing.Point(125, 172);
             this.textBoxConfirmPassword.MaxLength = 50;
             this.textBoxConfirmPassword.Name = "textBoxConfirmPassword";
             this.textBoxConfirmPassword.PasswordChar = '*';
@@ -138,7 +140,7 @@
             // labelConfirmPassword
             // 
             this.labelConfirmPassword.AutoSize = true;
-            this.labelConfirmPassword.Location = new System.Drawing.Point(34, 154);
+            this.labelConfirmPassword.Location = new System.Drawing.Point(122, 154);
             this.labelConfirmPassword.Name = "labelConfirmPassword";
             this.labelConfirmPassword.Size = new System.Drawing.Size(107, 15);
             this.labelConfirmPassword.TabIndex = 10;
@@ -146,7 +148,7 @@
             // 
             // buttonAddUser
             // 
-            this.buttonAddUser.Location = new System.Drawing.Point(86, 391);
+            this.buttonAddUser.Location = new System.Drawing.Point(174, 391);
             this.buttonAddUser.Name = "buttonAddUser";
             this.buttonAddUser.Size = new System.Drawing.Size(99, 23);
             this.buttonAddUser.TabIndex = 7;
@@ -158,16 +160,28 @@
             // 
             this.comboBoxAccessLevel.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
             this.comboBoxAccessLevel.FormattingEnabled = true;
-            this.comboBoxAccessLevel.Location = new System.Drawing.Point(37, 228);
+            this.comboBoxAccessLevel.Location = new System.Drawing.Point(125, 228);
             this.comboBoxAccessLevel.Name = "comboBoxAccessLevel";
             this.comboBoxAccessLevel.Size = new System.Drawing.Size(201, 21);
             this.comboBoxAccessLevel.TabIndex = 4;
+            // 
+            // dataGridView1
+            // 
+            this.dataGridView1.AllowUserToAddRows = false;
+            this.dataGridView1.AllowUserToDeleteRows = false;
+            this.dataGridView1.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
+            this.dataGridView1.Location = new System.Drawing.Point(60, 438);
+            this.dataGridView1.Name = "dataGridView1";
+            this.dataGridView1.ReadOnly = true;
+            this.dataGridView1.Size = new System.Drawing.Size(348, 208);
+            this.dataGridView1.TabIndex = 11;
             // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(284, 505);
+            this.ClientSize = new System.Drawing.Size(462, 674);
+            this.Controls.Add(this.dataGridView1);
             this.Controls.Add(this.comboBoxAccessLevel);
             this.Controls.Add(this.buttonAddUser);
             this.Controls.Add(this.textBoxConfirmPassword);
@@ -186,6 +200,7 @@
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
             this.Text = "Form1";
             this.Load += new System.EventHandler(this.Form1_Load);
+            ((System.ComponentModel.ISupportInitialize)(this.dataGridView1)).EndInit();
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -206,6 +221,7 @@
         private System.Windows.Forms.Label labelConfirmPassword;
         private System.Windows.Forms.Button buttonAddUser;
         private System.Windows.Forms.ComboBox comboBoxAccessLevel;
+        private System.Windows.Forms.DataGridView dataGridView1;
     }
 }
 

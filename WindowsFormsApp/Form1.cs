@@ -25,6 +25,7 @@ namespace WindowsFormsApp
         private void Form1_Load(object sender, EventArgs e)
         {
             AccessLeveltbl_Load();
+            populateDataGridView();
         }
         private void AccessLeveltbl_Load()
         {
@@ -77,37 +78,34 @@ namespace WindowsFormsApp
             textBoxPassword.Clear();
             return false;
         }
-        private bool Is_Existing_User(string strUsername)
+        private bool Is_Existing_User()
         {
-            string SQL_SELECT_STMNT = "SELECT * FROM dbo.[User] WHERE Username = '" + strUsername + "'";
-            SqlDataAdapter DATA_ADAPTER = new SqlDataAdapter(SQL_SELECT_STMNT, SQL_CONNECTION);
-            DataTable DATA_TABLE = new DataTable();
-            DATA_ADAPTER.Fill(DATA_TABLE);
-            if (DATA_TABLE.Rows.Count > 0)
+            string SQL_SELECT_STMNT = "SELECT COUNT(*) FROM dbo.[User] WHERE Username = @Username";
+            SqlCommand COMMAND = new SqlCommand(SQL_SELECT_STMNT, SQL_CONNECTION);
+            COMMAND.Parameters.AddWithValue("@Username", textBoxUsername.Text);
+            if (SQL_CONNECTION.State == ConnectionState.Closed)
+                SQL_CONNECTION.Open();
+            var result = COMMAND.ExecuteScalar();
+            if (result != null)
+            {
                 return true;
-            return false;
+            }
+            else return false;
         }
         private void buttonAddUser_Click(object sender, EventArgs e)
         {
             if (isValidated())
             {
-                if (Is_Existing_User(USER_USERNAME))
+                bool inserted = Insert_User_tbl();
+                if (inserted)
                 {
-                    MessageBox.Show("We already know you here " + USER_FIRSTNAME, "Account already exists", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                    Clear_All_Fields();
-                }
-                else
-                {
-                    Insert_User_tbl();
-                    string userGuid = Get_Guid_("TestRegister", "TestPassword");
+                    string userGuid = TestLogin("TestRegister", "TestPassword");
                     if (userGuid.Equals(""))
                         MessageBox.Show("Failed to Get Guid.", "", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    Register_User(userGuid);
+                    TestRegister(userGuid);
                 }
-
-                //TO:DO
-                //refresh and show comm table
-
+            
+                populateDataGridView();
             }
         }
 
@@ -121,7 +119,7 @@ namespace WindowsFormsApp
             return false;
         }
 
-        private string Get_Guid_(string authUsername, string authPassword)
+        private string TestLogin(string authUsername, string authPassword)
         {
             var client = new RestClient("http://www.autoediportal.com/AutoEDI/Api/v1/TestLogin.php");
             client.Timeout = -1;
@@ -142,14 +140,24 @@ namespace WindowsFormsApp
                 JsonDeserializer jsonDeserializer = new JsonDeserializer();
                 string message = jsonDeserializer.Deserialize<Response_on_Get_Guid>(response).message;
                 if (message.Equals("success"))
+                {
+                    Insert_Commbtl("TestLogin", true);
                     return jsonDeserializer.Deserialize<Response_on_Get_Guid>(response).guid;
-                else return "";
+                }
+                else
+                {
+                    Insert_Commbtl("TestLogin", false);
+                    return "";
+                }
             }
             else //ENCOUNTERED 404 OR SOME WIERD RESPONSE CODE
+            {
+                Insert_Commbtl("TestLogin", false);
                 return "";
+            }
         }
 
-        private void Register_User(string GUID)
+        private void TestRegister(string GUID)
         {
             var client = new RestClient("http://www.autoediportal.com/AutoEDI/api/v1/TestRegister.php");
             client.Timeout = -1;
@@ -183,6 +191,8 @@ namespace WindowsFormsApp
                     MessageBox.Show("Failed to register user on server. " + Guiderror, "", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     //TO:DO
                     //insert into comm table show failure
+                    Insert_Commbtl("TestRegister", false);
+                    populateDataGridView();
                 }
             }
             else //ENCOUNTERED 404 OR SOME WIERD RESPONSE CODE
@@ -190,26 +200,58 @@ namespace WindowsFormsApp
                 MessageBox.Show("Failed to hit server. Error: " + response.ErrorMessage, "", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 //TO:DO
                 //insert into comm table show failure
+                Insert_Commbtl("TestRegister", false);
+                populateDataGridView();
             }
         }
 
-        private void Insert_User_tbl()
+        private void Insert_Commbtl(string action, bool isSuccess)
         {
             string INSERT_QUERY =
-                "INSERT INTO dbo.[User] (Username, Password, AccessLevelId, FirstName, LastName, Registered) " +
-                "OUTPUT INSERTED.Id " +
-                "VALUES (@Username, @Password, @AccessLevelId, @FirstName, @LastName, @Registered)";
-            SQL_CONNECTION.Open();
+                            "INSERT INTO dbo.[Communication] (CreatedAt, Action, Result) " +
+                            "VALUES (@CreatedAt, @Action, @Result)";
+            if (SQL_CONNECTION.State == ConnectionState.Closed)
+                SQL_CONNECTION.Open();
             SqlCommand SQL_COMMAND = new SqlCommand(INSERT_QUERY, SQL_CONNECTION);
-            SQL_COMMAND.Parameters.AddWithValue("@Username", textBoxUsername.Text);
-            SQL_COMMAND.Parameters.AddWithValue("@Password", textBoxPassword.Text);
-            SQL_COMMAND.Parameters.Add("@AccessLevelId", SqlDbType.Int);
-            SQL_COMMAND.Parameters["@AccessLevelId"].Value = comboBoxAccessLevel.SelectedIndex;
-            SQL_COMMAND.Parameters.AddWithValue("@FirstName", textBoxFirstName.Text);
-            SQL_COMMAND.Parameters.AddWithValue("@LastName", textBoxLastName.Text);
-            SQL_COMMAND.Parameters.AddWithValue("@Registered", "False");    //default value
-            USER_ID = SQL_COMMAND.ExecuteScalar().ToString();
+            SQL_COMMAND.Parameters.AddWithValue("@CreatedAt", DateTime.Now);
+            if (action.Equals("TestRegister"))
+                SQL_COMMAND.Parameters.AddWithValue("@Action", "TestRegister");
+            else SQL_COMMAND.Parameters.AddWithValue("@Action", "TestLogin");
+            if (!isSuccess)
+                SQL_COMMAND.Parameters.AddWithValue("@Result", "Failed");
+            else SQL_COMMAND.Parameters.AddWithValue("@Result", "Success");
+            SQL_COMMAND.ExecuteScalar();
             SQL_CONNECTION.Close();
+        }
+
+        private bool Insert_User_tbl()
+        {
+            if (Is_Existing_User())
+            {
+                MessageBox.Show("User already exists", "", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                Clear_All_Fields();
+                return false;
+            }
+            else
+            {
+                string INSERT_QUERY =
+                    "INSERT INTO dbo.[User] (Username, Password, AccessLevelId, FirstName, LastName, Registered) " +
+                    "OUTPUT INSERTED.Id " +
+                    "VALUES (@Username, @Password, @AccessLevelId, @FirstName, @LastName, @Registered)";
+                if (SQL_CONNECTION.State == ConnectionState.Closed)
+                    SQL_CONNECTION.Open();
+                SqlCommand SQL_COMMAND = new SqlCommand(INSERT_QUERY, SQL_CONNECTION);
+                SQL_COMMAND.Parameters.AddWithValue("@Username", textBoxUsername.Text);
+                SQL_COMMAND.Parameters.AddWithValue("@Password", textBoxPassword.Text);
+                SQL_COMMAND.Parameters.Add("@AccessLevelId", SqlDbType.Int);
+                SQL_COMMAND.Parameters["@AccessLevelId"].Value = comboBoxAccessLevel.SelectedIndex;
+                SQL_COMMAND.Parameters.AddWithValue("@FirstName", textBoxFirstName.Text);
+                SQL_COMMAND.Parameters.AddWithValue("@LastName", textBoxLastName.Text);
+                SQL_COMMAND.Parameters.AddWithValue("@Registered", "False");    //default value
+                USER_ID = SQL_COMMAND.ExecuteScalar().ToString();
+                SQL_CONNECTION.Close();
+                return true;
+            }
         }
 
         private void Usertbl_Update()
@@ -221,6 +263,23 @@ namespace WindowsFormsApp
             SQL_CONNECTION.Open();
             SqlCommand SQL_COMMAND = new SqlCommand(UPDATE_QUERY, SQL_CONNECTION);
             SQL_COMMAND.ExecuteNonQuery();
+            SQL_CONNECTION.Close();
+        }
+
+        private void populateDataGridView()
+        {
+            if (SQL_CONNECTION.State == ConnectionState.Closed)
+                SQL_CONNECTION.Open();
+
+            string selectQuery = "SELECT * FROM Communication";
+            SqlDataAdapter dataAdapter = new SqlDataAdapter(selectQuery, SQL_CONNECTION);
+            dataAdapter.SelectCommand.CommandType = CommandType.Text;
+            DataTable dataTable = new DataTable();
+            dataAdapter.Fill(dataTable);
+
+            dataGridView1.DataSource = dataTable;
+            dataGridView1.Columns[0].Visible = false;
+
             SQL_CONNECTION.Close();
         }
     }
