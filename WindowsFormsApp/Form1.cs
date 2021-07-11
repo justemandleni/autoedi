@@ -99,10 +99,10 @@ namespace WindowsFormsApp
                 else
                 {
                     Insert_User_tbl();
-                    string userGuid = Get_Guid_("TestRegster", "TestPassword");
-                    if (!userGuid.Equals(""))
-                        Register_User(userGuid);
-                    MessageBox.Show("Failed to Get Guid.", "", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    string userGuid = Get_Guid_("TestRegister", "TestPassword");
+                    if (userGuid.Equals(""))
+                        MessageBox.Show("Failed to Get Guid.", "", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    Register_User(userGuid);
                 }
 
                 //TO:DO
@@ -153,20 +153,16 @@ namespace WindowsFormsApp
         {
             var client = new RestClient("http://www.autoediportal.com/AutoEDI/api/v1/TestRegister.php");
             client.Timeout = -1;
-            var request = new RestRequest(Method.POST);
-            //request.AddHeader("Authorization", "Basic VGVzdFJlZ2lzdGVyOlRlc3RQYXNzd29yZA==");
-            request.AddHeader("Content-Type", "application/json");
-            var body =
-                @"{
-                    ""guid"": """+GUID+@""",
-                    ""userId"": """+USER_ID+@""",
-                    ""username"":"""+USER_USERNAME+@""",
-                    ""password"": """+USER_PASSWORD+@""",
-                    ""accessLevelId"": """+USER_ACCESSLEVELID+@""", 
-                    ""firstName"": """+USER_FIRSTNAME+@""",
-                    ""lastName"": """+USER_LASTNAME+@"""
-                  }";
-            request.AddParameter("application/json", body, ParameterType.RequestBody);
+            var request = new RestRequest(Method.GET);
+            request.AddHeader("guid", GUID);
+            request.AddHeader("userId", USER_ID);
+            request.AddHeader("username", USER_USERNAME);
+            request.AddHeader("password", USER_PASSWORD);
+            request.AddHeader("accessLevelId", USER_ACCESSLEVELID);
+            request.AddHeader("firstName", USER_FIRSTNAME);
+            request.AddHeader("lastName", USER_LASTNAME);
+            var body = @"";
+            request.AddParameter("text/plain", body, ParameterType.RequestBody);
             IRestResponse response = client.Execute(request);
             if (response.IsSuccessful) // 200 OK
             {
@@ -182,15 +178,16 @@ namespace WindowsFormsApp
                 }
                 else
                 {
-                    string error = jsonDeserializer.Deserialize<Response_on_Register>(response).errors.Guid;
-                    MessageBox.Show("Failed to Register "+USER_FIRSTNAME+". " + error + ".", "", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    Errors objInresponseObj = jsonDeserializer.Deserialize<Response_on_Register>(response).errors;
+                    string Guiderror = objInresponseObj.Guid;
+                    MessageBox.Show("Failed to register user on server. " + Guiderror, "", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     //TO:DO
                     //insert into comm table show failure
                 }
             }
             else //ENCOUNTERED 404 OR SOME WIERD RESPONSE CODE
             {
-                MessageBox.Show("Failed to register user on server due to error code: " + response.StatusCode, "", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show("Failed to hit server. Error: " + response.ErrorMessage, "", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 //TO:DO
                 //insert into comm table show failure
             }
