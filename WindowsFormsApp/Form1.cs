@@ -39,6 +39,7 @@ namespace WindowsFormsApp
             comboBoxAccessLevel.ValueMember = "Id";
             comboBoxAccessLevel.DisplayMember = "Name";
             comboBoxAccessLevel.DataSource = DATA_TABLE;
+            SQL_CONNECTION.Close();
         }
         private void Clear_All_Fields()
         {
@@ -76,7 +77,7 @@ namespace WindowsFormsApp
             textBoxPassword.Clear();
             return false;
         }
-        private bool Is_User_Existing(string strUsername)
+        private bool Is_Existing_User(string strUsername)
         {
             string SQL_SELECT_STMNT = "SELECT * FROM dbo.[User] WHERE Username = '" + strUsername + "'";
             SqlDataAdapter DATA_ADAPTER = new SqlDataAdapter(SQL_SELECT_STMNT, SQL_CONNECTION);
@@ -90,7 +91,7 @@ namespace WindowsFormsApp
         {
             if (isValidated())
             {
-                if (Is_User_Existing(USER_USERNAME))
+                if (Is_Existing_User(USER_USERNAME))
                 {
                     MessageBox.Show("We already know you here " + USER_FIRSTNAME, "Account already exists", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     Clear_All_Fields();
@@ -98,41 +99,15 @@ namespace WindowsFormsApp
                 else
                 {
                     Insert_User_tbl();
-                    
-                    IRestResponse guidResponseObject = Get_Guid_();
-                    JsonDeserializer jsonDeserializer = new JsonDeserializer();
-
-                    IRestResponse restResponse2;
-
-                    if (guidResponseObject.IsSuccessful) //200 OK
-                    {
-                        string responseMessage = jsonDeserializer.Deserialize<Root>(guidResponseObject).message;
-                        string userGuid = jsonDeserializer.Deserialize<Root>(guidResponseObject).guid; //get user Guid
-
-                        if (responseMessage.Equals("success"))
-                        {
-                            restResponse2 = apiCalloutRegisterUser(userGuid, USER_ID); // call test register
-
-                            if (restResponse2.IsSuccessful)
-                                MessageBox.Show("Successfully registered " + textBoxFirstName.Text + "!", "Complete", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                            else
-                            {
-                                string message = jsonDeserializer.Deserialize<Root>(guidResponseObject).message;
-                                MessageBox.Show("" + message, "", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                            }
-                        }
-                    }
-                    else //ENCOUNTERED 404 OR SOME WIERD SERVER RESPONSE RESULT
-                    {
-                        MessageBox.Show("Failed to register due to error code: " + guidResponseObject.StatusCode, "", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                        //update User db as not registered
-                        Usertbl_Update(int.Parse(USER_ID));
-                    }
-
-                    Close();
+                    string userGuid = Get_Guid_("TestRegster", "TestPassword");
+                    if (!userGuid.Equals(""))
+                        Register_User(userGuid);
+                    MessageBox.Show("Failed to Get Guid.", "", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
 
-                SQL_CONNECTION.Close();
+                //TO:DO
+                //refresh and show comm table
+
             }
         }
 
@@ -146,7 +121,7 @@ namespace WindowsFormsApp
             return false;
         }
 
-        private string Get_Guid_()
+        private string Get_Guid_(string authUsername, string authPassword)
         {
             var client = new RestClient("http://www.autoediportal.com/AutoEDI/Api/v1/TestLogin.php");
             client.Timeout = -1;
@@ -155,30 +130,26 @@ namespace WindowsFormsApp
             request.AddHeader("Content-Type", "application/json");
             var body = @"{
                             " + "\n" +
-                           @"  ""username"":""TestRegister"",
+                           @"  ""username"":"""+authUsername+@""",
                             " + "\n" +
-                           @"  ""password"":""TestPassword""
+                           @"  ""password"":"""+authPassword+@"""
                             " + "\n" +
                        @"}";
             request.AddParameter("application/json", body, ParameterType.RequestBody);
             IRestResponse response = client.Execute(request);
-            if (response.IsSuccessful)
+            if (response.IsSuccessful) //200 OK
             {
                 JsonDeserializer jsonDeserializer = new JsonDeserializer();
-                string responseMessage = jsonDeserializer.Deserialize<Root>(response).message;
-                string userGuid = jsonDeserializer.Deserialize<Root>(response).guid;
-
-                return null;
+                string message = jsonDeserializer.Deserialize<Response_on_Get_Guid>(response).message;
+                if (message.Equals("success"))
+                    return jsonDeserializer.Deserialize<Response_on_Get_Guid>(response).guid;
+                else return "";
             }
             else //ENCOUNTERED 404 OR SOME WIERD RESPONSE CODE
-            {
-                MessageBox.Show("Failed to register due to error code: " + response.StatusCode, "", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                //update User db as not registered
-                Usertbl_Update(int.Parse(USER_ID));
-                return null;
-            }
+                return "";
         }
-        private IRestResponse apiCalloutRegisterUser(string guid, string userId)
+
+        private void Register_User(string GUID)
         {
             var client = new RestClient("http://www.autoediportal.com/AutoEDI/api/v1/TestRegister.php");
             client.Timeout = -1;
@@ -187,8 +158,8 @@ namespace WindowsFormsApp
             request.AddHeader("Content-Type", "application/json");
             var body =
                 @"{
-                    ""guid"": """+guid+@""",
-                    ""userId"": """+userId+@""",
+                    ""guid"": """+GUID+@""",
+                    ""userId"": """+USER_ID+@""",
                     ""username"":"""+USER_USERNAME+@""",
                     ""password"": """+USER_PASSWORD+@""",
                     ""accessLevelId"": """+USER_ACCESSLEVELID+@""", 
@@ -197,15 +168,41 @@ namespace WindowsFormsApp
                   }";
             request.AddParameter("application/json", body, ParameterType.RequestBody);
             IRestResponse response = client.Execute(request);
-            return response;
+            if (response.IsSuccessful) // 200 OK
+            {
+                //deserialise 
+                JsonDeserializer jsonDeserializer = new JsonDeserializer();
+                string message = jsonDeserializer.Deserialize<Response_on_Register>(response).message;
+                if (message.Equals("success"))
+                {
+                    Usertbl_Update();
+                    MessageBox.Show("Successfully registered " + USER_FIRSTNAME + ".", "", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    //TO:DO
+                    //insert into comm table show success
+                }
+                else
+                {
+                    string error = jsonDeserializer.Deserialize<Response_on_Register>(response).errors.Guid;
+                    MessageBox.Show("Failed to Register "+USER_FIRSTNAME+". " + error + ".", "", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    //TO:DO
+                    //insert into comm table show failure
+                }
+            }
+            else //ENCOUNTERED 404 OR SOME WIERD RESPONSE CODE
+            {
+                MessageBox.Show("Failed to register user on server due to error code: " + response.StatusCode, "", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                //TO:DO
+                //insert into comm table show failure
+            }
         }
 
         private void Insert_User_tbl()
         {
-            String INSERT_QUERY =
-                "INSERT INTO dbo.[User] (Username, Password, AccessLevelId, FirstName, LastName) " +
+            string INSERT_QUERY =
+                "INSERT INTO dbo.[User] (Username, Password, AccessLevelId, FirstName, LastName, Registered) " +
                 "OUTPUT INSERTED.Id " +
-                "VALUES (@Username, @Password, @AccessLevelId, @FirstName, @LastName)";
+                "VALUES (@Username, @Password, @AccessLevelId, @FirstName, @LastName, @Registered)";
+            SQL_CONNECTION.Open();
             SqlCommand SQL_COMMAND = new SqlCommand(INSERT_QUERY, SQL_CONNECTION);
             SQL_COMMAND.Parameters.AddWithValue("@Username", textBoxUsername.Text);
             SQL_COMMAND.Parameters.AddWithValue("@Password", textBoxPassword.Text);
@@ -213,12 +210,21 @@ namespace WindowsFormsApp
             SQL_COMMAND.Parameters["@AccessLevelId"].Value = comboBoxAccessLevel.SelectedIndex;
             SQL_COMMAND.Parameters.AddWithValue("@FirstName", textBoxFirstName.Text);
             SQL_COMMAND.Parameters.AddWithValue("@LastName", textBoxLastName.Text);
-            USER_ID = (string)SQL_COMMAND.ExecuteScalar();
+            SQL_COMMAND.Parameters.AddWithValue("@Registered", "False");    //default value
+            USER_ID = SQL_COMMAND.ExecuteScalar().ToString();
+            SQL_CONNECTION.Close();
         }
 
-        private void Usertbl_Update(int strUserId)
+        private void Usertbl_Update()
         {
-
+            string UPDATE_QUERY =
+                "UPDATE dbo.[User]" +
+                "SET Registered = 'True'" +
+                "WHERE Username = " + USER_ID;
+            SQL_CONNECTION.Open();
+            SqlCommand SQL_COMMAND = new SqlCommand(UPDATE_QUERY, SQL_CONNECTION);
+            SQL_COMMAND.ExecuteNonQuery();
+            SQL_CONNECTION.Close();
         }
     }
 }
