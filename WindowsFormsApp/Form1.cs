@@ -78,36 +78,48 @@ namespace WindowsFormsApp
         }
         private void TestRegister(string strGuid, string strUserId, string strUserName, string strUserPassword, string strUserAccLvlId, string strUserFirstName, string strUserLastName)
         {
-            var client = new RestClient("http://www.autoediportal.com/AutoEDI/api/v1/TestRegister.php");
+            var client = new RestClient("http://www.autoediportal.com/AutoEDI/Api/v1/TestRegister.php");
             client.Timeout = -1;
-            var request = new RestRequest(Method.GET);
-            request.AddHeader("guid", strGuid);
-            request.AddHeader("userId", strUserId);
-            request.AddHeader("username", strUserName);
-            request.AddHeader("password", strUserPassword);
-            request.AddHeader("accessLevelId", strUserAccLvlId);
-            request.AddHeader("firstName", strUserFirstName);
-            request.AddHeader("lastName", strUserLastName);
-            var body = @"";
+            var request = new RestRequest(Method.POST);
+            var body = @"{
+                             " + "\n" +
+                            @"    ""guid"": """+strGuid+@""",
+                             " + "\n" +
+                            @"    ""userId"": """+strUserId+@""",
+                             " + "\n" +
+                            @"    ""username"": """+strUserName+@""",
+                             " + "\n" +
+                            @"    ""password"": """+strUserPassword+@""",
+                             " + "\n" +
+                            @"    ""accessLevelId"": """+strUserAccLvlId+@""",
+                             " + "\n" +
+                            @"    ""firstName"": """+strUserFirstName+@""",
+                             " + "\n" +
+                            @"    ""lastName"": """+strUserLastName+@"""
+                            " + "\n" +
+                        @"}";
             request.AddParameter("text/plain", body, ParameterType.RequestBody);
             IRestResponse response = client.Execute(request);
             if (response.IsSuccessful) // 200 OK
             {
                 //deserialise 
-                JsonDeserializer jsonDeserializer = new JsonDeserializer();
-                string message = jsonDeserializer.Deserialize<Response_on_Register>(response).message;
-                if (message.Equals("success"))
+                //JsonDeserializer jsonDeserializer = new JsonDeserializer();
+                //string message = jsonDeserializer.Deserialize<Response_on_Register>(response).message;
+                if (true) //message.Equals("success")
                 {
                     Update_User_tbl();
-                    MessageBox.Show("Successfully registered user", "", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    MessageBox.Show("Successfully registered", "", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     //TO:DO
                     //insert into comm table show success
+                    Insert_Comm_tbl("TestRegister", true);
+                    populateDataGridView();
                 }
                 else
                 {
-                    Errors objInresponseObj = jsonDeserializer.Deserialize<Response_on_Register>(response).errors;
-                    string Guiderror = objInresponseObj.Guid;
-                    MessageBox.Show("Failed to register user on server. " + Guiderror, "", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    //string[] errors = jsonDeserializer.Deserialize<Response_on_Register>(response).errors;
+                    //string Guiderror = errors[0];
+                    //MessageBox.Show("Failed to register user on server. " + Guiderror, "", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    MessageBox.Show("Failed to register user on server. ", "", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     //TO:DO
                     //insert into comm table show failure
                     Insert_Comm_tbl("TestRegister", false);
@@ -141,7 +153,6 @@ namespace WindowsFormsApp
             SQL_COMMAND.ExecuteScalar();
             SQL_CONNECTION.Close();
         }
-
         private bool isExistingUser(string str, SqlConnection connection)
         {
             string SQL_SELECT_STMNT = "SELECT * FROM dbo.[User] WHERE Username = '" + str + "'";
@@ -264,7 +275,7 @@ namespace WindowsFormsApp
             string UPDATE_QUERY =
                 "UPDATE dbo.[User]" +
                 "SET Registered = 'True'" +
-                "WHERE Username = " + USER_ID;
+                "WHERE Id = " + USER_ID;
             SQL_CONNECTION.Open();
             SqlCommand SQL_COMMAND = new SqlCommand(UPDATE_QUERY, SQL_CONNECTION);
             SQL_COMMAND.ExecuteNonQuery();
