@@ -6,21 +6,23 @@
         public string message { get; set; }
     }
 
-    //public class Response_on_Register
-    //{
-    //    public string message { get; set; }
-    //    public string[] errors { get; set; }
-    //}
-
-    public class Errors
-    {
-        public string Guid { get; set; }
-    }
 
     public class Response_on_Register
     {
         public string message { get; set; }
-        public Errors errors { get; set; }
+        public string[] errors { get; set; }
     }
+
+
+    //public class Errors
+    //{
+    //    public string Guid { get; set; }
+    //}
+
+    //public class Response_on_Register
+    //{
+    //    public string message { get; set; }
+    //    public Errors errors { get; set; }
+    //}
 
 }

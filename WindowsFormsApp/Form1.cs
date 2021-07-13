@@ -4,6 +4,7 @@ using System.Data.SqlClient;
 using RestSharp;
 using System.Windows.Forms;
 using RestSharp.Serialization.Json;
+using Newtonsoft.Json;
 
 namespace WindowsFormsApp
 {
@@ -57,6 +58,7 @@ namespace WindowsFormsApp
             IRestResponse response = client.Execute(request);
             if (response.IsSuccessful) //200 OK
             {
+                //deserialise with NewtonSoft
                 JsonDeserializer jsonDeserializer = new JsonDeserializer();
                 string message = jsonDeserializer.Deserialize<Response_on_Get_Guid>(response).message;
                 if (message.Equals("success"))
@@ -102,28 +104,38 @@ namespace WindowsFormsApp
             IRestResponse response = client.Execute(request);
             if (response.IsSuccessful) // 200 OK
             {
-                //deserialise 
-                //JsonDeserializer jsonDeserializer = new JsonDeserializer();
-                //string message = jsonDeserializer.Deserialize<Response_on_Register>(response).message;
-                if (true) //message.Equals("success")
+                //deserialise with NewtonSoft
+                try
                 {
-                    Update_User_tbl();
-                    MessageBox.Show("Successfully registered", "", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                    //TO:DO
-                    //insert into comm table show success
-                    Insert_Comm_tbl("TestRegister", true);
-                    populateDataGridView();
+                    //JsonDeserializer jsonDeserializer = new JsonDeserializer();
+                    //var respContent = response.Content;
+                    var respContent = JsonConvert.DeserializeObject<Response_on_Register>(response.Content);
+                    //var message = jsonDeserializer.Deserialize<Response_on_Register>(response).message;
+                    if (respContent.message.Equals("success")) //message.Equals("success")
+                    {
+                        Update_User_tbl();
+                        MessageBox.Show("Successfully registered", "", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        //TO:DO
+                        //insert into comm table show success
+                        Insert_Comm_tbl("TestRegister", true);
+                        populateDataGridView();
+                    }
+                    else
+                    {
+                        //string[] errors = jsonDeserializer.Deserialize<Response_on_Register>(response).errors;
+                        //string Guiderror = errors[0];
+                        //MessageBox.Show("Failed to register user on server. " + Guiderror, "", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        MessageBox.Show($"Failed to register user on server. {respContent.errors[0]}", "", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        //TO:DO
+                        //insert into comm table show failure
+                        Insert_Comm_tbl("TestRegister", false);
+                        populateDataGridView();
+                    }
                 }
-                else
+                catch (Exception EX)
                 {
-                    //string[] errors = jsonDeserializer.Deserialize<Response_on_Register>(response).errors;
-                    //string Guiderror = errors[0];
-                    //MessageBox.Show("Failed to register user on server. " + Guiderror, "", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    MessageBox.Show("Failed to register user on server. ", "", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    //TO:DO
-                    //insert into comm table show failure
-                    Insert_Comm_tbl("TestRegister", false);
-                    populateDataGridView();
+
+                    throw;
                 }
             }
             else //ENCOUNTERED 404 OR SOME WIERD RESPONSE CODE
@@ -142,15 +154,23 @@ namespace WindowsFormsApp
                             "VALUES (@CreatedAt, @Action, @Result)";
             if (SQL_CONNECTION.State == ConnectionState.Closed)
                 SQL_CONNECTION.Open();
-            SqlCommand SQL_COMMAND = new SqlCommand(INSERT_QUERY, SQL_CONNECTION);
-            SQL_COMMAND.Parameters.AddWithValue("@CreatedAt", DateTime.Now);
-            if (action.Equals("TestRegister"))
-                SQL_COMMAND.Parameters.AddWithValue("@Action", "TestRegister");
-            else SQL_COMMAND.Parameters.AddWithValue("@Action", "TestLogin");
-            if (!isSuccess)
-                SQL_COMMAND.Parameters.AddWithValue("@Result", "Failed");
-            else SQL_COMMAND.Parameters.AddWithValue("@Result", "Success");
-            SQL_COMMAND.ExecuteScalar();
+            try
+            {
+                SqlCommand SQL_COMMAND = new SqlCommand(INSERT_QUERY, SQL_CONNECTION);
+                SQL_COMMAND.Parameters.AddWithValue("@CreatedAt", DateTime.Now);
+                if (action.Equals("TestRegister"))
+                    SQL_COMMAND.Parameters.AddWithValue("@Action", "TestRegister");
+                else SQL_COMMAND.Parameters.AddWithValue("@Action", "TestLogin");
+                if (!isSuccess)
+                    SQL_COMMAND.Parameters.AddWithValue("@Result", "Failed");
+                else SQL_COMMAND.Parameters.AddWithValue("@Result", "Success");
+                SQL_COMMAND.ExecuteScalar();
+            }
+            catch (Exception ex)
+            {
+
+                throw;
+            }
             SQL_CONNECTION.Close();
         }
         private bool isExistingUser(string str, SqlConnection connection)
@@ -174,16 +194,24 @@ namespace WindowsFormsApp
         private void populateComboBox()
         {
             string QUERY = "SELECT Id, Name FROM AccessLevel;";
-            SqlDataAdapter DATA_ADAPTER = new SqlDataAdapter(QUERY, SQL_CONNECTION);
-            SQL_CONNECTION.Open();
-            DataTable DATA_TABLE = new DataTable();
-            DATA_ADAPTER.Fill(DATA_TABLE);
-            DataRow ROW = DATA_TABLE.NewRow();
-            ROW[0] = 0;
-            DATA_TABLE.Rows.InsertAt(ROW, 0);
-            comboBoxAccessLevel.ValueMember = "Id";
-            comboBoxAccessLevel.DisplayMember = "Name";
-            comboBoxAccessLevel.DataSource = DATA_TABLE;
+            try
+            {
+                SqlDataAdapter DATA_ADAPTER = new SqlDataAdapter(QUERY, SQL_CONNECTION);
+                SQL_CONNECTION.Open();
+                DataTable DATA_TABLE = new DataTable();
+                DATA_ADAPTER.Fill(DATA_TABLE);
+                DataRow ROW = DATA_TABLE.NewRow();
+                ROW[0] = 0;
+                DATA_TABLE.Rows.InsertAt(ROW, 0);
+                comboBoxAccessLevel.ValueMember = "Id";
+                comboBoxAccessLevel.DisplayMember = "Name";
+                comboBoxAccessLevel.DataSource = DATA_TABLE;
+            }
+            catch (Exception ex)
+            {
+
+                throw;
+            }
             SQL_CONNECTION.Close();
         }
         private void populateDataGridView()
@@ -191,14 +219,22 @@ namespace WindowsFormsApp
             if (SQL_CONNECTION.State == ConnectionState.Closed)
                 SQL_CONNECTION.Open();
 
-            string selectQuery = "SELECT * FROM Communication";
-            SqlDataAdapter dataAdapter = new SqlDataAdapter(selectQuery, SQL_CONNECTION);
-            dataAdapter.SelectCommand.CommandType = CommandType.Text;
-            DataTable dataTable = new DataTable();
-            dataAdapter.Fill(dataTable);
+            try
+            {
+                string selectQuery = "SELECT * FROM Communication";
+                SqlDataAdapter dataAdapter = new SqlDataAdapter(selectQuery, SQL_CONNECTION);
+                dataAdapter.SelectCommand.CommandType = CommandType.Text;
+                DataTable dataTable = new DataTable();
+                dataAdapter.Fill(dataTable);
 
-            dataGridView1.DataSource = dataTable;
-            dataGridView1.Columns[0].Visible = false;
+                dataGridView1.DataSource = dataTable;
+                dataGridView1.Columns[0].Visible = false;
+            }
+            catch (Exception ex)
+            {
+
+                throw;
+            }
 
             SQL_CONNECTION.Close();
         }
@@ -265,7 +301,15 @@ namespace WindowsFormsApp
                 SQL_COMMAND.Parameters.AddWithValue("@FirstName", textBoxFirstName.Text);
                 SQL_COMMAND.Parameters.AddWithValue("@LastName", textBoxLastName.Text);
                 SQL_COMMAND.Parameters.AddWithValue("@Registered", "False");    //default value
-                USER_ID = SQL_COMMAND.ExecuteScalar().ToString();
+                try
+                {
+                    USER_ID = SQL_COMMAND.ExecuteScalar().ToString();
+                }
+                catch (Exception ex)
+                {
+
+                    throw;
+                }
                 SQL_CONNECTION.Close();
                 return true;
             }
@@ -276,10 +320,18 @@ namespace WindowsFormsApp
                 "UPDATE dbo.[User]" +
                 "SET Registered = 'True'" +
                 "WHERE Id = " + USER_ID;
-            SQL_CONNECTION.Open();
-            SqlCommand SQL_COMMAND = new SqlCommand(UPDATE_QUERY, SQL_CONNECTION);
-            SQL_COMMAND.ExecuteNonQuery();
-            SQL_CONNECTION.Close();
+            try
+            {
+                SQL_CONNECTION.Open();
+                SqlCommand SQL_COMMAND = new SqlCommand(UPDATE_QUERY, SQL_CONNECTION);
+                SQL_COMMAND.ExecuteNonQuery();
+                SQL_CONNECTION.Close();
+            }
+            catch (Exception ex)
+            {
+
+                throw;
+            }
         }
     }
 }
